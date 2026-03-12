@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DES Visualizer</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: #0d1117; color: #e6edf3; font-family: monospace; font-size: 14px; }
+a { color: #58a6ff; }
+
+header { padding: 16px 24px; border-bottom: 1px solid #21262d; display: flex; justify-content: space-between; align-items: center; }
+header h1 { font-size: 16px; letter-spacing: 2px; color: #58a6ff; }
+
+.wrap { max-width: 1100px; margin: 0 auto; padding: 24px; }
+
+.inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+label { display: block; color: #8b949e; font-size: 12px; margin-bottom: 6px; letter-spacing: 1px; }
+input[type=text] { width: 100%; background: #161b22; border: 1px solid #30363d; color: #e6edf3; padding: 8px 12px; font-family: monospace; font-size: 14px; border-radius: 4px; outline: none; }
+input[type=text]:focus { border-color: #58a6ff; }
+.fmt-row { display: flex; gap: 6px; margin-top: 6px; }
+button { background: #21262d; border: 1px solid #30363d; color: #8b949e; padding: 4px 10px; font-family: monospace; font-size: 12px; border-radius: 4px; cursor: pointer; }
+button:hover, button.on { background: #30363d; color: #e6edf3; border-color: #58a6ff; }
+.actions { display: flex; gap: 10px; margin-bottom: 24px; }
+.btn-run { background: #1f6feb; border-color: #1f6feb; color: #fff; padding: 8px 20px; font-size: 13px; }
+.btn-run:hover { background: #388bfd; }
+.err { color: #f85149; font-size: 13px; margin-bottom: 12px; min-height: 18px; }
+
+.result-bar { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 24px; }
+.rb { background: #161b22; border: 1px solid #30363d; border-radius: 6px; padding: 12px; }
+.rb-label { color: #8b949e; font-size: 11px; margin-bottom: 4px; }
+.rb-val { color: #3fb950; font-size: 15px; letter-spacing: 2px; word-break: break-all; }
+.rb-val.ct { color: #d29922; }
+
+.tabs { display: flex; gap: 0; border-bottom: 1px solid #21262d; }
+.tab { padding: 8px 16px; font-size: 12px; letter-spacing: 1px; cursor: pointer; color: #8b949e; border-bottom: 2px solid transparent; background: none; border-top: none; border-left: none; border-right: none; border-radius: 0; }
+.tab.on { color: #58a6ff; border-bottom-color: #58a6ff; }
+.tab:hover:not(.on) { color: #e6edf3; border-color: #30363d; }
+.pane { display: none; background: #161b22; border: 1px solid #21262d; border-top: none; padding: 24px; border-radius: 0 0 6px 6px; }
+.pane.on { display: block; }
+
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th { color: #8b949e; font-size: 11px; letter-spacing: 1px; padding: 8px; border-bottom: 1px solid #21262d; text-align: left; }
+td { padding: 8px; border-bottom: 1px solid #0d1117; }
+tr:hover td { background: #1c2128; cursor: pointer; }
+tr.sel td { background: #1a2332; }
+
+.pgrid { display: flex; flex-direction: column; gap: 3px; margin: 10px 0 18px; }
+.pgrid-row { display: flex; gap: 3px; }
+.pc { width: 32px; height: 28px; display: flex; align-items: center; justify-content: center; background: #0d1117; border: 1px solid #21262d; font-size: 11px; color: #8b949e; border-radius: 3px; }
+
+.drow { display: grid; grid-template-columns: 160px 130px 1fr; gap: 12px; padding: 9px 0; border-bottom: 1px solid #21262d; font-size: 13px; align-items: start; }
+.drow:last-child { border: none; }
+.dlabel { color: #8b949e; }
+.dhex { color: #58a6ff; letter-spacing: 2px; word-break: break-all; }
+.dbin { color: #484f58; letter-spacing: 1px; word-break: break-all; line-height: 1.8; }
+.b1 { color: #3fb950; }
+
+.step { background: #0d1117; border: 1px solid #21262d; border-radius: 5px; padding: 14px; margin-bottom: 10px; }
+.step-title { color: #8b949e; font-size: 11px; letter-spacing: 2px; margin-bottom: 10px; text-transform: uppercase; }
+.step-row { display: flex; gap: 12px; margin-bottom: 5px; }
+.sk { color: #8b949e; min-width: 120px; flex-shrink: 0; }
+.sv { color: #e6edf3; word-break: break-all; }
+
+.sboxes { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.sbox { background: #161b22; border: 1px solid #21262d; border-radius: 4px; padding: 8px; font-size: 12px; line-height: 1.7; }
+.sbox-t { color: #d29922; font-size: 11px; letter-spacing: 1px; margin-bottom: 4px; }
+.sbox-o { color: #3fb950; font-size: 15px; letter-spacing: 3px; margin-top: 4px; }
+
+.round-btns { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 16px; }
+.note { color: #6e7681; font-size: 12px; margin-bottom: 16px; line-height: 1.7; }
+.sec { color: #8b949e; font-size: 11px; letter-spacing: 1px; margin-bottom: 8px; margin-top: 4px; }
+
+.c1 { color: #58a6ff; }
+.c2 { color: #3fb950; }
+.c3 { color: #d29922; }
+.c4 { color: #f85149; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>DES VISUALIZER</h1>
+  <a href="https://csrc.nist.gov/files/pubs/fips/46/final/docs/nbs.fips.46.pdf" target="_blank">NIST FIPS 46 ↗</a>
+</header>
+
+<div class="wrap">
+  <div class="inputs">
+    <div>
+      <label>PLAINTEXT</label>
+      <input id="ptIn" type="text" value="ABCDEF1234567890">
+      <div class="fmt-row" id="ptFmts">
+        <button class="on" onclick="setFmt('pt','hex',this)">HEX</button>
+        <button onclick="setFmt('pt','txt',this)">TEXT</button>
+        <button onclick="setFmt('pt','bin',this)">BIN</button>
+        <button onclick="setFmt('pt','dec',this)">DEC</button>
+      </div>
+    </div>
+    <div>
+      <label>KEY</label>
+      <input id="keyIn" type="text" value="A1B2C3D4E5F60718">
+      <div class="fmt-row" id="keyFmts">
+        <button class="on" onclick="setFmt('key','hex',this)">HEX</button>
+        <button onclick="setFmt('key','txt',this)">TEXT</button>
+        <button onclick="setFmt('key','bin',this)">BIN</button>
+        <button onclick="setFmt('key','dec',this)">DEC</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="actions">
+    <button class="btn-run" onclick="run()">ENCRYPT</button>
+    <button onclick="rand()">RANDOM</button>
+    <button onclick="loadEx()">EXAMPLE</button>
+  </div>
+  <div id="err" class="err"></div>
+
+  <div id="results" style="display:none">
+    <div class="result-bar">
+      <div class="rb"><div class="rb-label">PLAINTEXT</div><div class="rb-val" id="r-pt"></div></div>
+      <div class="rb"><div class="rb-label">KEY</div><div class="rb-val" id="r-key"></div></div>
+      <div class="rb"><div class="rb-label">CIPHERTEXT</div><div class="rb-val ct" id="r-ct"></div></div>
+    </div>
+
+    <div class="tabs">
+      <button class="tab on"  onclick="tab('ip',this)">INITIAL PERM</button>
+      <button class="tab"     onclick="tab('ks',this)">KEY SCHEDULE</button>
+      <button class="tab"     onclick="tab('rounds',this)">ALL ROUNDS</button>
+      <button class="tab"     onclick="tab('rd',this)">ROUND DETAIL</button>
+      <button class="tab"     onclick="tab('fp',this)">FINAL PERM</button>
+    </div>
+    <div id="pane-ip"     class="pane on"></div>
+    <div id="pane-ks"     class="pane"></div>
+    <div id="pane-rounds" class="pane"></div>
+    <div id="pane-rd"     class="pane"></div>
+    <div id="pane-fp"     class="pane"></div>
+  </div>
+</div>
+
+<script>
+// ── TABLES ──────────────────────────────────────────────────────
+var IP_T  = [58,50,42,34,26,18,10,2,60,52,44,36,28,20,12,4,62,54,46,38,30,22,14,6,64,56,48,40,32,24,16,8,57,49,41,33,25,17,9,1,59,51,43,35,27,19,11,3,61,53,45,37,29,21,13,5,63,55,47,39,31,23,15,7];
+var FP_T  = [40,8,48,16,56,24,64,32,39,7,47,15,55,23,63,31,38,6,46,14,54,22,62,30,37,5,45,13,53,21,61,29,36,4,44,12,52,20,60,28,35,3,43,11,51,19,59,27,34,2,42,10,50,18,58,26,33,1,41,9,49,17,57,25];
+var PC1_T = [57,49,41,33,25,17,9,1,58,50,42,34,26,18,10,2,59,51,43,35,27,19,11,3,60,52,44,36,63,55,47,39,31,23,15,7,62,54,46,38,30,22,14,6,61,53,45,37,29,21,13,5,28,20,12,4];
+var PC2_T = [14,17,11,24,1,5,3,28,15,6,21,10,23,19,12,4,26,8,16,7,27,20,13,2,41,52,31,37,47,55,30,40,51,45,33,48,44,49,39,56,34,53,46,42,50,36,29,32];
+var E_T   = [32,1,2,3,4,5,4,5,6,7,8,9,8,9,10,11,12,13,12,13,14,15,16,17,16,17,18,19,20,21,20,21,22,23,24,25,24,25,26,27,28,29,28,29,30,31,32,1];
+var P_T   = [16,7,20,21,29,12,28,17,1,15,23,26,5,18,31,10,2,8,24,14,32,27,3,9,19,13,30,6,22,11,4,25];
+var SHF   = [1,1,2,2,2,2,2,2,1,2,2,2,2,2,2,1];
+var SB = [
+  [14,4,13,1,2,15,11,8,3,10,6,12,5,9,0,7,0,15,7,4,14,2,13,1,10,6,12,11,9,5,3,8,4,1,14,8,13,6,2,11,15,12,9,7,3,10,5,0,15,12,8,2,4,9,1,7,5,11,3,14,10,0,6,13],
+  [15,1,8,14,6,11,3,4,9,7,2,13,12,0,5,10,3,13,4,7,15,2,8,14,12,0,1,10,6,9,11,5,0,14,7,11,10,4,13,1,5,8,12,6,9,3,2,15,13,8,10,1,3,15,4,2,11,6,7,12,0,5,14,9],
+  [10,0,9,14,6,3,15,5,1,13,12,7,11,4,2,8,13,7,0,9,3,4,6,10,2,8,5,14,12,11,15,1,13,6,4,9,8,15,3,0,11,1,2,12,5,10,14,7,1,10,13,0,6,9,8,7,4,15,14,3,11,5,2,12],
+  [7,13,14,3,0,6,9,10,1,2,8,5,11,12,4,15,13,8,11,5,6,15,0,3,4,7,2,12,1,10,14,9,10,6,9,0,12,11,7,13,15,1,3,14,5,2,8,4,3,15,0,6,10,1,13,8,9,4,5,11,12,7,2,14],
+  [2,12,4,1,7,10,11,6,8,5,3,15,13,0,14,9,14,11,2,12,4,7,13,1,5,0,15,10,3,9,8,6,4,2,1,11,10,13,7,8,15,9,12,5,6,3,0,14,11,8,12,7,1,14,2,13,6,15,0,9,10,4,5,3],
+  [12,1,10,15,9,2,6,8,0,13,3,4,14,7,5,11,10,15,4,2,7,12,9,5,6,1,13,14,0,11,3,8,9,14,15,5,2,8,12,3,7,0,4,10,1,13,11,6,4,3,2,12,9,5,15,10,11,14,1,7,6,0,8,13],
+  [4,11,2,14,15,0,8,13,3,12,9,7,5,10,6,1,13,0,11,7,4,9,1,10,14,3,5,12,2,15,8,6,1,4,11,13,12,3,7,14,10,15,6,8,0,5,9,2,6,11,13,8,1,4,10,7,9,5,0,15,14,2,3,12],
+  [13,2,8,4,6,15,11,1,10,9,3,14,5,0,12,7,1,15,13,8,10,3,7,4,12,5,6,11,0,14,9,2,7,11,4,1,9,12,14,2,0,6,10,13,15,3,5,8,2,1,14,7,4,10,8,13,15,12,9,0,3,5,6,11]
+];
+
+// ── BIT HELPERS ─────────────────────────────────────────────────
+// Bits = plain Array of integers (0 or 1), length 64
+
+function hexToBits(hex) {
+  hex = hex.replace(/\s/g,'').toUpperCase();
+  if (hex.length !== 16) return null;
+  var out = [];
+  for (var i = 0; i < 16; i++) {
+    var v = parseInt(hex[i], 16);
+    if (isNaN(v)) return null;
+    out.push((v>>3)&1, (v>>2)&1, (v>>1)&1, v&1);
+  }
+  return out;
+}
+
+function bitsToHex(bits) {
+  var h = '';
+  for (var i = 0; i < bits.length; i += 4) {
+    var v = (bits[i]<<3)|(bits[i+1]<<2)|(bits[i+2]<<1)|bits[i+3];
+    h += v.toString(16).toUpperCase();
+  }
+  return h;
+}
+
+function bitsGroup(bits, g) {
+  var s = bits.join(''), out = [];
+  for (var i = 0; i < s.length; i += g) out.push(s.slice(i, i+g));
+  return out.join(' ');
+}
+
+function colorBits(bits) {
+  return bits.map(function(b){ return b ? '<span class="b1">1</span>' : '0'; }).join('');
+}
+
+function perm(bits, tbl) {
+  return tbl.map(function(n){ return bits[n-1]; });
+}
+
+function xorArr(a, b) {
+  return a.map(function(x,i){ return x^b[i]; });
+}
+
+function rotLeft(bits, n) {
+  return bits.slice(n).concat(bits.slice(0,n));
+}
+
+function applySbox(bits48) {
+  var out = [], dbg = [];
+  for (var i = 0; i < 8; i++) {
+    var g = bits48.slice(i*6, i*6+6);
+    var row = (g[0]<<1)|g[5];
+    var col = (g[1]<<3)|(g[2]<<2)|(g[3]<<1)|g[4];
+    var val = SB[i][row*16+col];
+    out.push((val>>3)&1, (val>>2)&1, (val>>1)&1, val&1);
+    dbg.push({ g: g.join(''), row: row, col: col, val: val, bits: val.toString(2).padStart(4,'0') });
+  }
+  return { out: out, dbg: dbg };
+}
+
+// ── FORMAT PARSING ───────────────────────────────────────────────
+var ptFmt = 'hex', keyFmt = 'hex';
+
+function parseInput(val, fmt) {
+  val = val.trim();
+  if (fmt === 'hex') return hexToBits(val);
+  if (fmt === 'txt') {
+    var h = '';
+    for (var i = 0; i < 8; i++) {
+      var code = i < val.length ? val.charCodeAt(i) : 0;
+      h += code.toString(16).padStart(2,'0');
+    }
+    return hexToBits(h.toUpperCase());
+  }
+  if (fmt === 'bin') {
+    val = val.replace(/\s/g,'');
+    if (val.length !== 64 || /[^01]/.test(val)) return null;
+    return val.split('').map(Number);
+  }
+  if (fmt === 'dec') {
+    try { return hexToBits(BigInt(val).toString(16).toUpperCase().padStart(16,'0').slice(-16)); }
+    catch(e) { return null; }
+  }
+  return null;
+}
+
+function setFmt(field, fmt, btn) {
+  var container = document.getElementById(field + 'Fmts');
+  container.querySelectorAll('button').forEach(function(b){ b.classList.remove('on'); });
+  btn.classList.add('on');
+  if (field === 'pt') ptFmt = fmt; else keyFmt = fmt;
+}
+
+function rand() {
+  function rh(){ return Array.from({length:16}, function(){ return '0123456789ABCDEF'[Math.floor(Math.random()*16)]; }).join(''); }
+  document.getElementById('ptIn').value = rh();
+  document.getElementById('keyIn').value = rh();
+  ptFmt = 'hex'; keyFmt = 'hex';
+  ['ptFmts','keyFmts'].forEach(function(id){
+    var c = document.getElementById(id);
+    c.querySelectorAll('button').forEach(function(b){ b.classList.remove('on'); });
+    c.querySelectorAll('button')[0].classList.add('on');
+  });
+  run();
+}
+
+function loadEx() {
+  document.getElementById('ptIn').value = 'ABCDEF1234567890';
+  document.getElementById('keyIn').value = 'A1B2C3D4E5F60718';
+  ptFmt = 'hex'; keyFmt = 'hex';
+  ['ptFmts','keyFmts'].forEach(function(id){
+    var c = document.getElementById(id);
+    c.querySelectorAll('button').forEach(function(b){ b.classList.remove('on'); });
+    c.querySelectorAll('button')[0].classList.add('on');
+  });
+  run();
+}
+
+// ── DES CORE ────────────────────────────────────────────────────
+var G = null;
+
+function desEncrypt(ptBits, keyBits) {
+  var ipOut = perm(ptBits, IP_T);
+  var L = ipOut.slice(0,32), R = ipOut.slice(32);
+
+  // Key schedule
+  var pc1Out = perm(keyBits, PC1_T);
+  var C = pc1Out.slice(0,28), D = pc1Out.slice(28);
+  var subkeys = [], Cs = [C.slice()], Ds = [D.slice()];
+  for (var i = 0; i < 16; i++) {
+    C = rotLeft(C, SHF[i]); D = rotLeft(D, SHF[i]);
+    Cs.push(C.slice()); Ds.push(D.slice());
+    subkeys.push(perm(C.concat(D), PC2_T));
+  }
+
+  // 16 rounds
+  var rounds = [{ n:0, L:L.slice(), R:R.slice(), K:null, eR:null, xored:null, sout:null, sdbg:null, fR:null }];
+  for (var i = 0; i < 16; i++) {
+    var K  = subkeys[i];
+    var eR = perm(R, E_T);
+    var xored = xorArr(eR, K);
+    var sb = applySbox(xored);
+    var fR = perm(sb.out, P_T);
+    var newR = xorArr(L, fR);
+    L = R.slice(); R = newR.slice();
+    rounds.push({ n:i+1, L:L.slice(), R:R.slice(), K:K.slice(), eR:eR.slice(), xored:xored.slice(), sout:sb.out.slice(), sdbg:sb.dbg, fR:fR.slice() });
+  }
+
+  var preSwap = rounds[16].R.concat(rounds[16].L);
+  var ctBits  = perm(preSwap, FP_T);
+  return { ptBits:ptBits, keyBits:keyBits, ipOut:ipOut, pc1Out:pc1Out, Cs:Cs, Ds:Ds, subkeys:subkeys, rounds:rounds, preSwap:preSwap, ctBits:ctBits };
+}
+
+function run() {
+  document.getElementById('err').textContent = '';
+  var ptBits  = parseInput(document.getElementById('ptIn').value,  ptFmt);
+  var keyBits = parseInput(document.getElementById('keyIn').value, keyFmt);
+  if (!ptBits)  { document.getElementById('err').textContent = 'Invalid plaintext for selected format.'; return; }
+  if (!keyBits) { document.getElementById('err').textContent = 'Invalid key for selected format.'; return; }
+
+  G = desEncrypt(ptBits, keyBits);
+
+  document.getElementById('r-pt').textContent  = bitsToHex(G.ptBits);
+  document.getElementById('r-key').textContent = bitsToHex(G.keyBits);
+  document.getElementById('r-ct').textContent  = bitsToHex(G.ctBits);
+  document.getElementById('results').style.display = 'block';
+
+  renderIP(); renderKS(); renderRounds(); renderRoundDetail(1); renderFP();
+}
+
+// ── RENDER HELPERS ───────────────────────────────────────────────
+function drow(label, bits, hexColor) {
+  var hex = bitsToHex(bits);
+  var hc = hexColor || '#58a6ff';
+  return '<div class="drow">' +
+    '<div class="dlabel">' + label + '</div>' +
+    '<div class="dhex" style="color:' + hc + '">' + hex + '</div>' +
+    '<div class="dbin">' + colorBits(bits) + '</div>' +
+    '</div>';
+}
+
+function makePgrid(tbl, cols) {
+  var h = '<div class="pgrid">';
+  for (var r = 0; r < tbl.length / cols; r++) {
+    h += '<div class="pgrid-row">';
+    for (var c = 0; c < cols; c++) h += '<div class="pc">' + tbl[r*cols+c] + '</div>';
+    h += '</div>';
+  }
+  return h + '</div>';
+}
+
+// ── RENDER PANES ─────────────────────────────────────────────────
+function renderIP() {
+  var g = G, r = g.rounds;
+  document.getElementById('pane-ip').innerHTML =
+    '<p class="note">IP[i]=n means output bit i comes from input bit n. No cryptographic value — hardware legacy.</p>' +
+    '<div class="sec">IP TABLE</div>' + makePgrid(IP_T, 8) +
+    drow('Plaintext (64-bit)', g.ptBits) +
+    drow('After IP (64-bit)', g.ipOut) +
+    drow('L0 (bits 1–32)', r[0].L) +
+    drow('R0 (bits 33–64)', r[0].R, '#3fb950');
+}
+
+function renderKS() {
+  var g = G;
+  var html =
+    '<p class="note">PC-1 reduces 64→56 bits (drops parity). Split C0/D0 (28 bits each). Each round: left-rotate by schedule → PC-2 → 48-bit subkey.</p>' +
+    '<div class="sec">PC-1 TABLE</div>' + makePgrid(PC1_T, 7) +
+    drow('Key (64-bit)', g.keyBits, '#d29922') +
+    drow('After PC-1 (56-bit)', g.pc1Out, '#d29922') +
+    drow('C0 (bits 1–28)', g.pc1Out.slice(0,28), '#d29922') +
+    drow('D0 (bits 29–56)', g.pc1Out.slice(28), '#d29922') +
+    '<br><div class="sec">16 SUBKEYS</div>' +
+    '<table><tr><th>Round</th><th>Rot</th><th>C (hex)</th><th>D (hex)</th><th>Subkey K (hex)</th></tr>';
+  for (var i = 0; i < 16; i++) {
+    html += '<tr><td class="c3">' + (i+1) + '</td><td style="color:#6e7681">' + SHF[i] +
+      '</td><td>' + bitsToHex(g.Cs[i+1]) + '</td><td>' + bitsToHex(g.Ds[i+1]) +
+      '</td><td class="c3">' + bitsToHex(g.subkeys[i]) + '</td></tr>';
+  }
+  html += '</table>';
+  document.getElementById('pane-ks').innerHTML = html;
+}
+
+function renderRounds() {
+  var g = G, r = g.rounds;
+  var rows = '<tr><td class="c1">0 (after IP)</td><td class="c1">' + bitsToHex(r[0].L) +
+    '</td><td class="c2">' + bitsToHex(r[0].R) + '</td><td>—</td><td>—</td></tr>';
+  for (var i = 1; i <= 16; i++) {
+    rows += '<tr id="rr' + i + '" onclick="selectRound(' + i + ')">' +
+      '<td class="c1">' + i + '</td>' +
+      '<td class="c1">' + bitsToHex(r[i].L) + '</td>' +
+      '<td class="c2">' + bitsToHex(r[i].R) + '</td>' +
+      '<td class="c3">' + bitsToHex(r[i].K) + '</td>' +
+      '<td class="c4">' + bitsToHex(r[i].fR) + '</td></tr>';
+  }
+  document.getElementById('pane-rounds').innerHTML =
+    '<p class="note">Click any row to see its full step-by-step in ROUND DETAIL.</p>' +
+    '<table><tr><th>Round</th><th>L (hex)</th><th>R (hex)</th><th>Subkey K (hex)</th><th>f(R,K) (hex)</th></tr>' + rows + '</table>';
+}
+
+function selectRound(n) {
+  for (var i = 1; i <= 16; i++) {
+    var el = document.getElementById('rr'+i);
+    if (el) el.classList.remove('sel');
+  }
+  var sel = document.getElementById('rr'+n);
+  if (sel) sel.classList.add('sel');
+  tab('rd', document.querySelectorAll('.tab')[3]);
+  renderRoundDetail(n);
+}
+
+var curRound = 1;
+function renderRoundDetail(n) {
+  curRound = n || curRound;
+  var r = G.rounds[curRound], prev = G.rounds[curRound-1];
+
+  var btns = '<div class="round-btns">';
+  for (var i = 1; i <= 16; i++) {
+    btns += '<button class="' + (i===curRound?'on':'') + '" onclick="renderRoundDetail(' + i + ')">' + i + '</button>';
+  }
+  btns += '</div>';
+
+  var sbhtml = '<div class="sboxes">';
+  r.sdbg.forEach(function(s, i) {
+    sbhtml += '<div class="sbox"><div class="sbox-t">S' + (i+1) + '</div>' +
+      '<div>Input: ' + s.g + '</div>' +
+      '<div>Row (b1,b6): ' + s.row + '</div>' +
+      '<div>Col (b2–b5): ' + s.col + '</div>' +
+      '<div>S' + (i+1) + '[' + s.row + '][' + s.col + '] = ' + s.val + '</div>' +
+      '<div class="sbox-o">' + s.bits + '</div></div>';
+  });
+  sbhtml += '</div>';
+
+  document.getElementById('pane-rd').innerHTML = btns +
+    '<div class="step"><div class="step-title">INPUT</div>' +
+      '<div class="step-row"><span class="sk">L' + (curRound-1) + '</span><span class="sv c1">' + bitsToHex(prev.L) + '</span></div>' +
+      '<div class="step-row"><span class="sk">R' + (curRound-1) + '</span><span class="sv c2">' + bitsToHex(prev.R) + '</span></div>' +
+      '<div class="step-row"><span class="sk">K' + curRound + '</span><span class="sv c3">' + bitsToHex(r.K) + '</span></div></div>' +
+    '<div class="step"><div class="step-title">EXPAND  R' + (curRound-1) + ': 32 → 48 bits</div>' +
+      '<div class="step-row"><span class="sk">R' + (curRound-1) + '</span><span class="sv">' + bitsGroup(prev.R, 4) + '</span></div>' +
+      '<div class="step-row"><span class="sk">E(R' + (curRound-1) + ')</span><span class="sv">' + bitsGroup(r.eR, 6) + '</span></div></div>' +
+    '<div class="step"><div class="step-title">XOR  E(R) ⊕ K' + curRound + '</div>' +
+      '<div class="step-row"><span class="sk">E(R)</span><span class="sv">' + bitsGroup(r.eR, 6) + '</span></div>' +
+      '<div class="step-row"><span class="sk">K' + curRound + '</span><span class="sv c3">' + bitsGroup(r.K, 6) + '</span></div>' +
+      '<div class="step-row"><span class="sk">XOR result</span><span class="sv c4">' + bitsGroup(r.xored, 6) + '</span></div></div>' +
+    '<div class="step"><div class="step-title">S-BOX SUBSTITUTION  (only non-linear step)</div>' + sbhtml + '</div>' +
+    '<div class="step"><div class="step-title">P-PERMUTATION  32 → 32 bits</div>' +
+      '<div class="step-row"><span class="sk">S-box out</span><span class="sv">' + bitsGroup(r.sout, 4) + '</span></div>' +
+      '<div class="step-row"><span class="sk">After P</span><span class="sv">' + bitsGroup(r.fR, 4) + '</span></div></div>' +
+    '<div class="step"><div class="step-title">OUTPUT</div>' +
+      '<div class="step-row"><span class="sk">L' + curRound + ' = R' + (curRound-1) + '</span><span class="sv c1">' + bitsToHex(r.L) + '</span></div>' +
+      '<div class="step-row"><span class="sk">R' + curRound + ' = L' + (curRound-1) + ' ⊕ f</span><span class="sv c2">' + bitsToHex(r.R) + '</span></div></div>';
+}
+
+function renderFP() {
+  var g = G, r = g.rounds;
+  document.getElementById('pane-fp').innerHTML =
+    '<p class="note">After round 16, halves are SWAPPED (R16 ‖ L16 — R before L!), then IP⁻¹ produces the ciphertext.</p>' +
+    '<div class="sec">IP⁻¹ TABLE</div>' + makePgrid(FP_T, 8) +
+    drow('L16', r[16].L) +
+    drow('R16', r[16].R, '#3fb950') +
+    drow('R16 ‖ L16 (swapped)', g.preSwap) +
+    drow('Ciphertext = IP⁻¹(…)', g.ctBits, '#d29922');
+}
+
+// ── TABS ────────────────────────────────────────────────────────
+function tab(name, btn) {
+  document.querySelectorAll('.pane').forEach(function(p){ p.classList.remove('on'); });
+  document.querySelectorAll('.tab').forEach(function(t){ t.classList.remove('on'); });
+  document.getElementById('pane-' + name).classList.add('on');
+  if (btn) btn.classList.add('on');
+}
+
+// init
+loadEx();
+</script>
+</body>
+</html>
