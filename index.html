@@ -326,7 +326,7 @@ function rand(){
   run();
 }
 function loadEx(){
-  document.getElementById('ptIn').value='ABCDEF1234567890';document.getElementById('keyIn').value='A1B2C3D4E5F60718';
+  document.getElementById('ptIn').value='0000000000000000';document.getElementById('keyIn').value='0000000000000000';
   ptFmt='hex';keyFmt='hex';
   ['ptFmts','keyFmts'].forEach(function(id){var c=document.getElementById(id);c.querySelectorAll('button').forEach(function(b){b.classList.remove('on');});c.querySelector('button').classList.add('on');});
   run();
